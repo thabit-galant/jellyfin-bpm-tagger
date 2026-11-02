@@ -1,0 +1,16 @@
+{
+  "category": "Music",
+  "changelog": "First release.",
+  "description": "Detects the tempo of your music with Jellyfin's own ffmpeg and adds a BPM:<value> tag in Jellyfin for smart playlists. Your audio files are not changed.",
+  "guid": "eebae169-8826-4ddf-b5aa-def3f5855640",
+  "name": "BPM Tagger",
+  "overview": "Detect BPM and tag your music library in Jellyfin",
+  "owner": "local",
+  "targetAbi": "10.11.0.0",
+  "timestamp": "2026-11-02T00:00:00.0000000Z",
+  "version": "1.0.0.0",
+  "status": "Active",
+  "autoUpdate": false,
+  "imagePath": "",
+  "assemblies": []
+}

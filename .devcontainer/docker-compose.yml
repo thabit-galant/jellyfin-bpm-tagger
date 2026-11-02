@@ -1,0 +1,25 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspaces/jellyfin-plugin-bpm:cached
+    command: sleep infinity
+
+  # A throwaway Jellyfin server to test the plugin against.
+  # Its config, plugins and test music live in .dev/ in the project folder (git-ignored).
+  jellyfin:
+    image: jellyfin/jellyfin:10.11.11
+    container_name: bpm-tagger-jellyfin
+    # Run as the same user as the dev container (and your WSL/Linux user, normally 1000),
+    # so both can write to .dev/. Change this if `id -u` on your host prints something else.
+    user: "1000:1000"
+    volumes:
+      - ../.dev/jellyfin/config:/config
+      - ../.dev/jellyfin/cache:/cache
+      # Use copies, not your real library.
+      - ../.dev/music:/music
+    ports:
+      - "8096:8096"
+    restart: unless-stopped

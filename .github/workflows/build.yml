@@ -1,0 +1,29 @@
+name: Build plugin
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build
+        run: dotnet publish Jellyfin.Plugin.BpmTagger/Jellyfin.Plugin.BpmTagger.csproj -c Release -o publish
+
+      - name: Package
+        run: |
+          mkdir -p "dist/BPM Tagger_1.0.0.0"
+          cp publish/Jellyfin.Plugin.BpmTagger.dll meta.json "dist/BPM Tagger_1.0.0.0/"
+          ls -la "dist/BPM Tagger_1.0.0.0"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bpm-tagger-1.0.0.0
+          path: dist/

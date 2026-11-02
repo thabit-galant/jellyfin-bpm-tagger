@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>BPM Tagger</title>
+</head>
+<body>
+<div id="BpmTaggerConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="BpmTaggerConfigForm">
+                <div class="verticalSection">
+                    <h2 class="sectionTitle">BPM Tagger</h2>
+                    <p>Detects the tempo of each music track and adds it as a Jellyfin tag, e.g. "BPM:128", so the SmartLists plugin can filter by tempo. Your audio files are not changed. Run it from <b>Dashboard → Scheduled Tasks → Library → Detect BPM of music</b>; by default it also runs nightly at 03:00.</p>
+                </div>
+
+                <h3>Jellyfin tag</h3>
+                <div class="inputContainer">
+                    <input id="TagPrefix" type="text" is="emby-input" label="Jellyfin tag prefix" />
+                    <div class="fieldDescription">Default "BPM:" matches the MusicTags plugin's format. Tracks with this tag are skipped on later runs.</div>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="OverwriteExisting" type="checkbox" is="emby-checkbox" />
+                        <span>Re-analyse tracks that already have a BPM</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">Off: BPM values already in your files are trusted and simply copied to the Jellyfin tag.</div>
+                </div>
+
+                <h3>Detection</h3>
+                <div class="inputContainer">
+                    <input id="MinBpm" type="number" is="emby-input" min="30" max="300" label="Lowest BPM" />
+                </div>
+                <div class="inputContainer">
+                    <input id="MaxBpm" type="number" is="emby-input" min="60" max="400" label="Highest BPM" />
+                    <div class="fieldDescription">Results outside this range are doubled or halved into it. The range must span at least an octave (highest ≥ 2 × lowest). Raise the lowest value (e.g. 90–185) if drum &amp; bass and fast rock come out at half speed; keep it low (70–180) so slow hip-hop isn't doubled.</div>
+                </div>
+                <div class="inputContainer">
+                    <input id="AnalyseSeconds" type="number" is="emby-input" min="15" max="600" label="Seconds of audio to analyse" />
+                    <div class="fieldDescription">Analysis starts 30 seconds in to skip intros. 60 seconds is a good balance of speed and accuracy.</div>
+                </div>
+                <div class="inputContainer">
+                    <input id="MinConfidence" type="number" is="emby-input" min="0" max="1" step="0.05" label="Minimum confidence (0–1)" />
+                    <div class="fieldDescription">Tracks without a clear beat (ambient, classical, spoken word) score low and are left untagged.</div>
+                </div>
+
+                <h3>Performance</h3>
+                <div class="inputContainer">
+                    <input id="Parallelism" type="number" is="emby-input" min="1" max="8" label="Tracks analysed at once" />
+                    <div class="fieldDescription">Use 1 on a Raspberry Pi or low-power NAS.</div>
+                </div>
+                <div class="inputContainer">
+                    <input id="MaxTracksPerRun" type="number" is="emby-input" min="0" label="Maximum tracks per run (0 = no limit)" />
+                    <div class="fieldDescription">Spread a large library over several nights.</div>
+                </div>
+
+                <div>
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button"><span>Save</span></button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script type="text/javascript">
+        var BpmTaggerConfig = {
+            pluginUniqueId: 'eebae169-8826-4ddf-b5aa-def3f5855640',
+            checkboxes: ['OverwriteExisting'],
+            numbers: ['MinBpm', 'MaxBpm', 'AnalyseSeconds', 'MinConfidence', 'Parallelism', 'MaxTracksPerRun'],
+            texts: ['TagPrefix']
+        };
+
+        document.querySelector('#BpmTaggerConfigPage').addEventListener('pageshow', function () {
+            Dashboard.showLoadingMsg();
+            ApiClient.getPluginConfiguration(BpmTaggerConfig.pluginUniqueId).then(function (config) {
+                BpmTaggerConfig.checkboxes.forEach(function (k) { document.getElementById(k).checked = !!config[k]; });
+                BpmTaggerConfig.numbers.forEach(function (k) { document.getElementById(k).value = config[k]; });
+                BpmTaggerConfig.texts.forEach(function (k) { document.getElementById(k).value = config[k] || ''; });
+                Dashboard.hideLoadingMsg();
+            });
+        });
+
+        document.querySelector('#BpmTaggerConfigForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            Dashboard.showLoadingMsg();
+            ApiClient.getPluginConfiguration(BpmTaggerConfig.pluginUniqueId).then(function (config) {
+                BpmTaggerConfig.checkboxes.forEach(function (k) { config[k] = document.getElementById(k).checked; });
+                BpmTaggerConfig.numbers.forEach(function (k) {
+                    var v = parseFloat(document.getElementById(k).value);
+                    if (!isNaN(v)) { config[k] = k === 'MinConfidence' ? v : Math.round(v); }
+                });
+                BpmTaggerConfig.texts.forEach(function (k) { config[k] = document.getElementById(k).value; });
+                ApiClient.updatePluginConfiguration(BpmTaggerConfig.pluginUniqueId, config).then(function (result) {
+                    Dashboard.processPluginConfigurationUpdateResult(result);
+                });
+            });
+            return false;
+        });
+    </script>
+</div>
+</body>
+</html>

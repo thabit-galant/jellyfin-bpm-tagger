@@ -1,0 +1,71 @@
+name: Publish release
+
+# Publishing a GitHub release named after a semantic version tag like v1.2.0 builds the plugin,
+# attaches the zip to the release and adds it to manifest.json. Pre-releases are skipped until they
+# are promoted, and a promoted release needs a plain vMAJOR.MINOR.PATCH tag.
+on:
+  release:
+    types: [released]
+
+permissions:
+  contents: write
+
+# Each run commits to manifest.json, so run them one at a time.
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+      CHANGELOG: ${{ github.event.release.body }}
+      TIMESTAMP: ${{ github.event.release.published_at }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Read version from tag
+        run: |
+          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Tag '$TAG' must be a semantic version with no suffix, like v1.2.0"
+            exit 1
+          fi
+          # Jellyfin plugin versions have four parts, so the last one stays 0.
+          echo "VERSION=${TAG#v}.0" >> "$GITHUB_ENV"
+
+      - name: Build and package
+        run: bash .github/scripts/package.sh "$VERSION" "$GITHUB_REPOSITORY_OWNER" "$CHANGELOG" "$TIMESTAMP"
+
+      - name: Attach zip to release
+        run: gh release upload "$TAG" "dist/bpm-tagger_$VERSION.zip" --clobber
+
+      # The release event checks out the tag, but the manifest lives on the default branch.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: manifest-repo
+
+      - name: Update manifest
+        run: |
+          bash .github/scripts/update-manifest.sh manifest-repo/manifest.json "dist/bpm-tagger_$VERSION.zip" \
+            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG/bpm-tagger_$VERSION.zip"
+
+      - name: Commit manifest
+        working-directory: manifest-repo
+        run: |
+          if git diff --quiet -- manifest.json; then
+            echo "manifest.json is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "Add version $VERSION to manifest"
+          git pull --rebase
+          git push

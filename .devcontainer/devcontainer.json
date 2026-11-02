@@ -1,0 +1,30 @@
+{
+  "name": "BPM Tagger (Jellyfin plugin)",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "dev",
+  "runServices": ["dev", "jellyfin"],
+  "workspaceFolder": "/workspaces/jellyfin-plugin-bpm",
+  "shutdownAction": "stopCompose",
+
+  "features": {
+    // Lets deploy-plugin.sh restart the Jellyfin container after copying the new build.
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+
+  "initializeCommand": "mkdir -p .dev/jellyfin/config .dev/jellyfin/cache .dev/music",
+  "postCreateCommand": "dotnet restore Jellyfin.Plugin.BpmTagger/Jellyfin.Plugin.BpmTagger.csproj",
+
+  "forwardPorts": ["jellyfin:8096"],
+  "portsAttributes": {
+    "jellyfin:8096": { "label": "Jellyfin", "onAutoForward": "notify" }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "editorconfig.editorconfig"
+      ]
+    }
+  }
+}

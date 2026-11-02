@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build plugin",
+      "type": "shell",
+      "command": "dotnet build Jellyfin.Plugin.BpmTagger/Jellyfin.Plugin.BpmTagger.csproj -c Release",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Deploy plugin to dev Jellyfin",
+      "type": "shell",
+      "command": "bash .devcontainer/deploy-plugin.sh",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Show dev Jellyfin logs",
+      "type": "shell",
+      "command": "docker logs -f --tail 100 bpm-tagger-jellyfin",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
